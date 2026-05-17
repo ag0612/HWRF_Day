@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="HWRF Day">
+<meta name="theme-color" content="#1F4E79">
+<title>HWRF Day</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231F4E79'/%3E%3Ctext x='50' y='62' font-family='system-ui' font-size='38' font-weight='600' fill='white' text-anchor='middle'%3EH%3C/text%3E%3C/svg%3E">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --bg: #FAF9F7;
+    --surface: #FFFFFF;
+    --surface-2: #F1EFE8;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.14);
+    --text: #1C1C1A;
+    --text-2: #5F5E5A;
+    --text-3: #888780;
+    --accent: #1F4E79;
+    --morning: #AFA9EC;
+    --work: #EF9F27;
+    --break: #5DCAA5;
+    --evening: #97C459;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1A1A19;
+      --surface: #242422;
+      --surface-2: #2C2C2A;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(255,255,255,0.14);
+      --text: #F1EFE8;
+      --text-2: #B4B2A9;
+      --text-3: #888780;
+      --accent: #85B7EB;
+    }
+  }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  body { min-height: 100vh; min-height: 100dvh; }
+  .app {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+    padding-top: max(env(safe-area-inset-top), 16px);
+    padding-bottom: 88px;
+  }
+  header { padding: 12px 4px 16px; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .sub { font-size: 13px; color: var(--text-2); margin: 4px 0 0; }
+  .clock {
+    margin-top: 14px; padding: 14px 16px;
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .clock-time { font-size: 13px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .clock-now { font-size: 14px; font-weight: 500; color: var(--text); }
+  .clock-next { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+  .toggle {
+    display: flex; gap: 4px; padding: 3px;
+    background: var(--surface-2); border-radius: var(--radius-sm);
+    margin: 16px 0 12px;
+  }
+  .toggle button {
+    flex: 1; background: transparent; border: none; padding: 9px;
+    font-size: 13px; font-weight: 500; color: var(--text-2);
+    border-radius: 6px; cursor: pointer; font-family: inherit;
+    transition: all 0.15s;
+  }
+  .toggle button.active {
+    background: var(--surface); color: var(--text);
+    box-shadow: 0 0 0 0.5px var(--border-strong);
+  }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11px; color: var(--text-2); margin-bottom: 12px; padding: 0 2px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .row {
+    display: block; width: 100%; text-align: left;
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 12px 14px 12px 18px;
+    cursor: pointer; position: relative;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: inherit; color: var(--text);
+  }
+  .row.now { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+  .row::before {
+    content: ''; position: absolute; left: 0; top: 8px; bottom: 8px;
+    width: 3px; border-radius: 2px;
+  }
+  .row.morning::before { background: var(--morning); }
+  .row.work::before    { background: var(--work); }
+  .row.evening::before { background: var(--evening); }
+  .row.break::before   { background: var(--break); }
+  .row-top { display: flex; align-items: baseline; gap: 10px; }
+  .time { font-size: 12px; color: var(--text-2); font-weight: 500; min-width: 44px; font-variant-numeric: tabular-nums; }
+  .block { font-size: 14px; font-weight: 500; flex: 1; }
+  .chev { font-size: 12px; color: var(--text-3); transition: transform 0.15s; }
+  .row.open .chev { transform: rotate(180deg); }
+  .detail {
+    font-size: 13px; color: var(--text-2); line-height: 1.55;
+    margin-top: 8px; display: none;
+  }
+  .row.open .detail { display: block; }
+  .now-pill {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    background: var(--accent); color: white;
+    padding: 2px 6px; border-radius: 4px; margin-left: 6px;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: saturate(180%) blur(16px);
+    -webkit-backdrop-filter: saturate(180%) blur(16px);
+    border-top: 0.5px solid var(--border);
+    padding: 8px env(safe-area-inset-right) calc(env(safe-area-inset-bottom) + 8px) env(safe-area-inset-left);
+    display: flex; justify-content: space-around;
+    z-index: 10;
+  }
+  .nav button {
+    background: transparent; border: none; padding: 8px 14px;
+    font-family: inherit; font-size: 11px; color: var(--text-2);
+    cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    border-radius: 8px; min-width: 64px;
+  }
+  .nav button.active { color: var(--accent); }
+  .nav button .ico { font-size: 18px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .card {
+    background: var(--surface); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+  }
+  .card h3 { font-size: 15px; font-weight: 500; margin: 0 0 8px; }
+  .card p { font-size: 14px; line-height: 1.6; color: var(--text-2); margin: 0 0 10px; }
+  .card p:last-child { margin-bottom: 0; }
+  .verse {
+    font-family: Georgia, "Times New Roman", serif;
+    font-style: italic; font-size: 14px; line-height: 1.7;
+    color: var(--text); padding: 12px 14px;
+    background: var(--surface-2); border-radius: var(--radius-sm);
+    margin: 10px 0;
+  }
+  .sanskrit {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 15px; line-height: 1.7;
+    color: var(--text); text-align: center;
+    padding: 14px; background: var(--surface-2);
+    border-radius: var(--radius-sm); margin: 10px 0;
+  }
+  .pillar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+  .pillar { padding: 12px; background: var(--surface-2); border-radius: var(--radius-sm); }
+  .pillar-name { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+  .pillar-text { font-size: 13px; color: var(--text); margin-top: 4px; line-height: 1.5; }
+  .breath-stage {
+    display: flex; align-items: center; justify-content: center;
+    height: 200px; margin: 16px 0;
+  }
+  .breath-circle {
+    width: 100px; height: 100px; border-radius: 50%;
+    background: var(--accent); opacity: 0.18;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 4s ease-in-out, opacity 4s ease-in-out;
+    color: var(--text); font-weight: 500; font-size: 13px;
+  }
+  .breath-circle.inhale { transform: scale(1.8); opacity: 0.4; transition-duration: 4s; }
+  .breath-circle.hold   { transform: scale(1.8); opacity: 0.4; transition-duration: 2s; }
+  .breath-circle.exhale { transform: scale(1.0); opacity: 0.18; transition-duration: 6s; }
+  .breath-controls { display: flex; gap: 8px; margin-top: 8px; }
+  .btn {
+    flex: 1; padding: 12px; background: var(--surface);
+    border: 0.5px solid var(--border-strong); border-radius: var(--radius-sm);
+    font-family: inherit; font-size: 14px; font-weight: 500; color: var(--text);
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+  .anchor-list { list-style: none; padding: 0; margin: 0; }
+  .anchor-list li {
+    font-size: 13px; line-height: 1.6; color: var(--text-2);
+    padding: 8px 0 8px 18px; position: relative;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .anchor-list li:last-child { border-bottom: none; }
+  .anchor-list li::before {
+    content: '·'; position: absolute; left: 4px; color: var(--accent);
+    font-weight: 700; font-size: 18px; line-height: 1.2;
+  }
+  .footer-note { text-align: center; font-size: 11px; color: var(--text-3); padding: 16px 0; font-style: italic; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- TODAY VIEW -->
+  <section class="view active" id="view-today">
+    <header>
+      <h1>Today</h1>
+      <p class="sub" id="today-date">—</p>
+      <div class="clock" id="clock">
+        <div>
+          <div class="clock-now" id="clock-now">Loading…</div>
+          <div class="clock-next" id="clock-next">—</div>
+        </div>
+        <div class="clock-time" id="clock-time">—</div>
+      </div>
+    </header>
+
+    <div class="toggle" role="tablist">
+      <button id="tab-wd" class="active" onclick="setMode('weekday')">Weekday</button>
+      <button id="tab-we" onclick="setMode('weekend')">Weekend</button>
+    </div>
+
+    <div class="legend">
+      <span><i style="background:var(--morning)"></i>Morning</span>
+      <span><i style="background:var(--work)"></i>Work</span>
+      <span><i style="background:var(--break)"></i>Breath</span>
+      <span><i style="background:var(--evening)"></i>Evening</span>
+    </div>
+
+    <div id="list" class="list"></div>
+  </section>
+
+  <!-- BREATH VIEW -->
+  <section class="view" id="view-breath">
+    <header><h1>Breath</h1><p class="sub">4-2-6 · paced for re-regulation</p></header>
+    <div class="card">
+      <h3 id="breath-phase">Ready</h3>
+      <p id="breath-count" style="font-variant-numeric: tabular-nums;">Tap start to begin a 2-minute cycle</p>
+      <div class="breath-stage">
+        <div class="breath-circle" id="breath-circle">Breathe</div>
+      </div>
+      <div class="breath-controls">
+        <button class="btn btn-primary" id="breath-toggle" onclick="toggleBreath()">Start</button>
+        <button class="btn" onclick="resetBreath()">Reset</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Anulom Vilom (alternate nostril)</h3>
+      <p>Sit with a straight spine. Close right nostril, inhale left for 4. Close both, hold for 2. Open right, exhale 6. Inhale right 4 · hold 2 · exhale left 6. That's one round. Aim for 8–10 rounds.</p>
+      <p>Use when the work block transitions: 10:30, 2:15, 4:00. Anytime a sensation tries to pull you into analysis.</p>
+    </div>
+  </section>
+
+  <!-- GITA VIEW -->
+  <section class="view" id="view-gita">
+    <header><h1>Gita anchor</h1><p class="sub">2.47 — your karma, not the phala</p></header>
+    <div class="card">
+      <div class="sanskrit">
+        कर्मण्येवाधिकारस्ते मा फलेषु कदाचन।<br>
+        मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्तु अकर्मणि॥
+      </div>
+      <div class="verse">
+        You have a right to perform your prescribed duty, but you are not entitled to the fruits of your actions. Never consider yourself the cause of the results of your activities, and never be attached to not doing your duty.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Four parts of the verse</h3>
+      <p><b>Act</b> — your authority is the action. Showing up. The 5:00 wake. The breath at 10:30. The office presence rebuilt one day at a time.</p>
+      <p><b>Release the fruit</b> — outcomes are not yours to grip. Whether the day feels calm, whether the office reset lands, whether BVRC gains traction this quarter.</p>
+      <p><b>Drop the doership</b> — don't even take yourself to be the cause of results. This is the antidote to overthinking. Action done with full attention, then released.</p>
+      <p><b>Don't withdraw</b> — equanimity is not avoidance. The harder conversations, the visibility you're rebuilding — these are karma you don't get to skip.</p>
+    </div>
+    <div class="card">
+      <h3>For today</h3>
+      <p>One action: do the next thing on the timetable, with full presence, and release it. Not "execute the week perfectly." Just the next thing.</p>
+      <p>The trip to Digboi already proved this. Karma done, phala took care of itself. Trust the pattern again.</p>
+    </div>
+  </section>
+
+  <!-- HWRF VIEW -->
+  <section class="view" id="view-hwrf">
+    <header><h1>HWRF</h1><p class="sub">The four pillars · daily check</p></header>
+    <div class="card">
+      <h3>Today's pillars</h3>
+      <div class="pillar-grid">
+        <div class="pillar"><div class="pillar-name">Health</div><div class="pillar-text">Movement · breath · sleep by 11</div></div>
+        <div class="pillar"><div class="pillar-name">Wealth</div><div class="pillar-text">Deloitte runway · Bridgevalue block</div></div>
+        <div class="pillar"><div class="pillar-name">Relationships</div><div class="pillar-text">Priyanka · Maa Diti · Jumi</div></div>
+        <div class="pillar"><div class="pillar-name">Faith</div><div class="pillar-text">Gita · Anulom Vilom · stillness</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Anchors that don't move</h3>
+      <ul class="anchor-list">
+        <li>Work has a hard boundary: 9:00 to 6:00</li>
+        <li>Three breath checkpoints inside the work window: 10:30, 2:15, 4:00</li>
+        <li>Mornings before 9:00 are protected — no email, no Slack</li>
+        <li>Movement after 6:00 — walk, cycle, sport</li>
+        <li>Shutdown ritual at 5:30 — top 3 for tomorrow, verbal cue, close tabs</li>
+        <li>Sleep by 11:00</li>
+        <li>Power nap is permitted and planned, not stolen</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>If anxiety rises</h3>
+      <p>Stop. 4-2-6 breath for 5 cycles. Name the sensation. Redirect to the next concrete action. Don't investigate.</p>
+      <p>Sensations after stress are normal. Medical exams were clear. The pattern is known. Each redirect rewires the response.</p>
+    </div>
+    <p class="footer-note">Jai Shri Krishna</p>
+  </section>
+
+</div>
+
+<nav class="nav">
+  <button class="active" data-view="today" onclick="setView('today')"><span class="ico">◐</span>Today</button>
+  <button data-view="breath" onclick="setView('breath')"><span class="ico">○</span>Breath</button>
+  <button data-view="gita" onclick="setView('gita')"><span class="ico">✦</span>Gita</button>
+  <button data-view="hwrf" onclick="setView('hwrf')"><span class="ico">◇</span>HWRF</button>
+</nav>
+
+<script>
+  const WEEKDAY = [
+    { time: '5:00', start: 5.00, end: 5.33, block: 'Wake & ground', cat: 'morning', detail: 'Warm water, stand at a window. No phone, no email. Stillness before stimulus.' },
+    { time: '5:20', start: 5.33, end: 5.83, block: 'Gita reading', cat: 'morning', detail: 'Mukundananda translation. One verse, brief reflection. Anchor for the day.' },
+    { time: '5:50', start: 5.83, end: 6.33, block: 'Anulom Vilom + yoga', cat: 'morning', detail: '10–15 min breathing, then gentle stretching. Regulate the nervous system before the day starts.' },
+    { time: '6:20', start: 6.33, end: 7.00, block: 'Movement / workout', cat: 'morning', detail: 'Strength, mobility, or walk. Health pillar. Not optional.' },
+    { time: '7:00', start: 7.00, end: 7.75, block: 'Shower & breakfast', cat: 'morning', detail: 'Light, unhurried. No screen. With Priyanka if she\u2019s around.' },
+    { time: '7:45', start: 7.75, end: 8.75, block: 'Personal time', cat: 'morning', detail: 'Reading, journaling, HWRF tracker, or just being. Not work. Protect this hour.' },
+    { time: '8:45', start: 8.75, end: 9.00, block: 'Transition to work', cat: 'morning', detail: 'Coffee. Set the day\u2019s top 3. Five cycles of 4-2-6 breath before opening the laptop.' },
+    { time: '9:00', start: 9.00, end: 10.50, block: 'Deep work — Deloitte', cat: 'work', detail: 'Hardest M&A / FDD work first. Phone on Do Not Disturb. Single task.' },
+    { time: '10:30', start: 10.50, end: 10.67, block: 'Breath break', cat: 'break', detail: 'Step away from desk. Anulom Vilom or 4-2-6 for 5 min. Water. Eyes on something far.' },
+    { time: '10:40', start: 10.67, end: 12.50, block: 'Deloitte block 2', cat: 'work', detail: 'Calls, reviews, team work. On office days, this is your visibility window.' },
+    { time: '12:30', start: 12.50, end: 13.25, block: 'Lunch + short walk', cat: 'work', detail: 'Eat away from desk. 10-min walk after — even indoors. Resets focus.' },
+    { time: '1:15',  start: 13.25, end: 14.25, block: 'Power nap (optional)', cat: 'work', detail: '20–60 min if needed. Set alarm. If not napping, do quiet admin. Don\u2019t force it.' },
+    { time: '2:15',  start: 14.25, end: 14.42, block: 'Breath reset', cat: 'break', detail: 'Anulom Vilom. Clean re-entry after nap or quiet block.' },
+    { time: '2:25',  start: 14.42, end: 16.00, block: 'Bridgevalue block', cat: 'work', detail: 'BVRC / BKP — research, planning, ops. Your 2030 runway. One focused entity per session.' },
+    { time: '4:00',  start: 16.00, end: 16.17, block: 'Breath break', cat: 'break', detail: '4-2-6 breath. Brief walk to window or water. Reset.' },
+    { time: '4:10',  start: 16.17, end: 17.50, block: 'Deloitte wrap / comms', cat: 'work', detail: 'Emails, follow-ups, prep for tomorrow. Lighter cognitive load by design.' },
+    { time: '5:30',  start: 17.50, end: 18.00, block: 'Shutdown ritual', cat: 'work', detail: 'Tomorrow\u2019s top 3. Close tabs. HWRF tracker entry. Verbal cue: "work is done."' },
+    { time: '6:00',  start: 18.00, end: 19.25, block: 'Fun / movement', cat: 'evening', detail: 'Walk, cycle, sport, gym, badminton. Outside if possible. Phone silent or off.' },
+    { time: '7:15',  start: 19.25, end: 20.25, block: 'Dinner with Priyanka', cat: 'evening', detail: 'No screens. Talk about anything but work. Relationships pillar.' },
+    { time: '8:15',  start: 20.25, end: 21.50, block: 'Wind-down', cat: 'evening', detail: 'Reading (not business), music, a series, hobby, family call. Low-stimulation.' },
+    { time: '9:30',  start: 21.50, end: 22.25, block: 'Personal review', cat: 'evening', detail: 'Brief journaling: what went well, one gratitude, one Gita reflection. HWRF micro-check.' },
+    { time: '10:15', start: 22.25, end: 22.75, block: 'Pre-sleep wind-down', cat: 'evening', detail: 'Dim lights. Light stretch. Anulom Vilom 5–10 min. Phone away from bed.' },
+    { time: '10:45', start: 22.75, end: 23.00, block: 'Sleep prep', cat: 'evening', detail: 'Bed. Paper book if needed. Lights out by 11:00.' },
+  ];
+
+  const WEEKEND = [
+    { time: '5:30',  start: 5.50,  end: 6.00,  block: 'Slow wake', cat: 'morning', detail: 'Sleep a bit longer if the body asks. Warm water, window, Gita reading.' },
+    { time: '6:00',  start: 6.00,  end: 7.00,  block: 'Longer movement', cat: 'morning', detail: 'Cycle, long walk, hike, or sport. Movement is the priority today, not a task.' },
+    { time: '7:00',  start: 7.00,  end: 9.00,  block: 'Slow breakfast', cat: 'morning', detail: 'Unhurried. Cook with Priyanka. Conversation, not phone.' },
+    { time: '9:00',  start: 9.00,  end: 11.00, block: 'Bridgevalue (optional)', cat: 'work', detail: 'ONE focused session if energy is there — strategy, BVRC research, vision work. Otherwise skip guilt-free.' },
+    { time: '11:00', start: 11.00, end: 13.00, block: 'Personal / errands', cat: 'morning', detail: 'Whatever the week needs. Buffer block.' },
+    { time: '1:00',  start: 13.00, end: 14.00, block: 'Lunch', cat: 'morning', detail: 'Properly seated, no laptop. Family call if it\u2019s a parent or Jumi day.' },
+    { time: '2:00',  start: 14.00, end: 15.50, block: 'Power nap or rest', cat: 'work', detail: 'Generous nap permitted. Or a book and chai.' },
+    { time: '3:30',  start: 15.50, end: 18.00, block: 'Fun / social / hobby', cat: 'evening', detail: 'Sport, friends, exploring, photography. Outside the house ideally.' },
+    { time: '6:00',  start: 18.00, end: 20.00, block: 'Dinner / social', cat: 'evening', detail: 'Dinner out or in. Phone off.' },
+    { time: '8:00',  start: 20.00, end: 22.50, block: 'Wind-down + reflect', cat: 'evening', detail: 'Weekly HWRF review on Sunday. Light reading. Anulom Vilom before bed.' },
+    { time: '10:30', start: 22.50, end: 23.00, block: 'Sleep prep', cat: 'evening', detail: 'Same protocol as weekdays.' },
+  ];
+
+  let currentMode = null;
+
+  function render(items) {
+    const list = document.getElementById('list');
+    list.innerHTML = '';
+    const nowDec = decimalHours();
+    items.forEach((it) => {
+      const row = document.createElement('button');
+      row.className = 'row ' + it.cat;
+      const isNow = nowDec >= it.start && nowDec < it.end && isToday(currentMode);
+      if (isNow) row.classList.add('now');
+      row.innerHTML =
+        '<div class="row-top">' +
+          '<span class="time">' + it.time + '</span>' +
+          '<span class="block">' + it.block + (isNow ? '<span class="now-pill">Now</span>' : '') + '</span>' +
+          '<span class="chev">▾</span>' +
+        '</div>' +
+        '<div class="detail">' + it.detail + '</div>';
+      row.onclick = () => row.classList.toggle('open');
+      list.appendChild(row);
+    });
+    updateClock(items);
+  }
+
+  function decimalHours(d) {
+    d = d || new Date();
+    return d.getHours() + d.getMinutes() / 60;
+  }
+
+  function isToday(mode) {
+    const day = new Date().getDay(); // 0 Sun, 6 Sat
+    const isWeekend = day === 0 || day === 6;
+    return (mode === 'weekend' && isWeekend) || (mode === 'weekday' && !isWeekend);
+  }
+
+  function fmtTime(d) {
+    let h = d.getHours(); const m = d.getMinutes();
+    const am = h < 12 ? 'AM' : 'PM';
+    h = h % 12 || 12;
+    return h + ':' + (m < 10 ? '0' : '') + m + ' ' + am;
+  }
+
+  function updateClock(items) {
+    const now = new Date();
+    document.getElementById('clock-time').textContent = fmtTime(now);
+    document.getElementById('today-date').textContent =
+      now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+    if (!isToday(currentMode)) {
+      document.getElementById('clock-now').textContent = 'Viewing ' + currentMode + ' template';
+      document.getElementById('clock-next').textContent = '';
+      return;
+    }
+    const nowDec = decimalHours(now);
+    const current = items.find(x => nowDec >= x.start && nowDec < x.end);
+    const next = items.find(x => x.start > nowDec);
+    document.getElementById('clock-now').textContent = current ? 'Now: ' + current.block : 'Off-schedule';
+    document.getElementById('clock-next').textContent = next ? 'Next at ' + next.time + ' · ' + next.block : 'Rest of day is free';
+  }
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('tab-wd').classList.toggle('active', mode === 'weekday');
+    document.getElementById('tab-we').classList.toggle('active', mode === 'weekend');
+    render(mode === 'weekday' ? WEEKDAY : WEEKEND);
+    try { localStorage.setItem('hwrf-mode', mode); } catch (e) {}
+  }
+
+  function setView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + name));
+    document.querySelectorAll('.nav button').forEach(b => b.classList.toggle('active', b.dataset.view === name));
+    window.scrollTo(0, 0);
+  }
+
+  // Auto-detect weekday/weekend on load
+  const saved = (function() { try { return localStorage.getItem('hwrf-mode'); } catch (e) { return null; } })();
+  const day = new Date().getDay();
+  const defaultMode = saved || ((day === 0 || day === 6) ? 'weekend' : 'weekday');
+  setMode(defaultMode);
+
+  // Refresh clock every minute
+  setInterval(() => render(currentMode === 'weekday' ? WEEKDAY : WEEKEND), 60000);
+
+  // ===== Breath timer =====
+  let breathRunning = false;
+  let breathInterval = null;
+  let breathStage = 0; // 0 inhale 4s, 1 hold 2s, 2 exhale 6s
+  let breathSeconds = 0;
+  let breathRound = 0;
+  const TOTAL_ROUNDS = 10;
+  const stageNames = ['Inhale', 'Hold', 'Exhale'];
+  const stageSecs = [4, 2, 6];
+  const stageClass = ['inhale', 'hold', 'exhale'];
+
+  function toggleBreath() {
+    if (breathRunning) {
+      pauseBreath();
+    } else {
+      startBreath();
+    }
+  }
+  function startBreath() {
+    breathRunning = true;
+    document.getElementById('breath-toggle').textContent = 'Pause';
+    tickBreath();
+    breathInterval = setInterval(tickBreath, 1000);
+  }
+  function pauseBreath() {
+    breathRunning = false;
+    document.getElementById('breath-toggle').textContent = 'Resume';
+    clearInterval(breathInterval);
+  }
+  function resetBreath() {
+    pauseBreath();
+    breathStage = 0; breathSeconds = 0; breathRound = 0;
+    document.getElementById('breath-toggle').textContent = 'Start';
+    document.getElementById('breath-phase').textContent = 'Ready';
+    document.getElementById('breath-count').textContent = 'Tap start to begin a 2-minute cycle';
+    const c = document.getElementById('breath-circle');
+    c.className = 'breath-circle';
+    c.textContent = 'Breathe';
+  }
+  function tickBreath() {
+    if (breathSeconds === 0) {
+      const c = document.getElementById('breath-circle');
+      c.className = 'breath-circle ' + stageClass[breathStage];
+      c.textContent = stageNames[breathStage];
+      document.getElementById('breath-phase').textContent = stageNames[breathStage] + ' · round ' + (breathRound + 1) + ' of ' + TOTAL_ROUNDS;
+    }
+    breathSeconds++;
+    document.getElementById('breath-count').textContent = (stageSecs[breathStage] - breathSeconds + 1) + 's';
+    if (breathSeconds >= stageSecs[breathStage]) {
+      breathSeconds = 0;
+      breathStage = (breathStage + 1) % 3;
+      if (breathStage === 0) {
+        breathRound++;
+        if (breathRound >= TOTAL_ROUNDS) {
+          pauseBreath();
+          document.getElementById('breath-phase').textContent = 'Complete';
+          document.getElementById('breath-count').textContent = TOTAL_ROUNDS + ' rounds done.';
+          document.getElementById('breath-toggle').textContent = 'Start again';
+          breathRound = 0;
+          return;
+        }
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
